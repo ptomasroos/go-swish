@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 
@@ -15,25 +16,43 @@ var (
 	ErrNoLocationHeader = errors.New("Error: No location header from Swish API")
 )
 
+// A StringOrNumber is an string that can be unmarshalled from a JSON field that has either a number or a string value.
+type StringOrNumber string
+
+// Unmarshal JSON either as plain string or convert the float64 coming back from the api into a string
+func (son *StringOrNumber) UnmarshalJSON(b []byte) error {
+	if b[0] == '"' {
+		return json.Unmarshal(b, (*string)(son))
+	}
+
+	var s float64
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	*son = StringOrNumber(fmt.Sprintf("%.2f", s)) // 2 in precision is what Swish API expects
+	return nil
+}
+
 // PaymentRequest represents a payment request from Swish API.
 type PaymentRequest struct {
-	AdditionalInformation    string `json:"additionalInformation,omitempty"`
-	Amount                   string `json:"amount,omitempty"`
-	CallbackURL              string `json:"callbackUrl,omitempty"`
-	Currency                 string `json:"currency,omitempty"`
-	DateCreated              string `json:"dateCreated,omitempty"`
-	DatePaid                 string `json:"datePaid,omitempty"`
-	ErrorCode                string `json:"errorCode,omitempty"`
-	ErrorMessage             string `json:"errorMessage,omitempty"`
-	ID                       string `json:"id,omitempty"`
-	Message                  string `json:"message,omitempty"`
-	PayeeAlias               string `json:"payeeAlias,omitempty"`
-	PayeePaymentReference    string `json:"payeePaymentReference,omitempty"`
-	PayerPaymentReference    string `json:"payerPaymentReference,omitempty"`
-	PayerAlias               string `json:"payerAlias,omitempty"`
-	PaymentReference         string `json:"paymentReference,omitempty"`
-	OriginalPaymentReference string `json:"originalPaymentReference,omitempty"`
-	Status                   string `json:"status,omitempty"`
+	AdditionalInformation    string         `json:"additionalInformation,omitempty"`
+	Amount                   StringOrNumber `json:"amount,omitempty"`
+	CallbackURL              string         `json:"callbackUrl,omitempty"`
+	Currency                 string         `json:"currency,omitempty"`
+	DateCreated              string         `json:"dateCreated,omitempty"`
+	DatePaid                 string         `json:"datePaid,omitempty"`
+	ErrorCode                string         `json:"errorCode,omitempty"`
+	ErrorMessage             string         `json:"errorMessage,omitempty"`
+	ID                       string         `json:"id,omitempty"`
+	Message                  string         `json:"message,omitempty"`
+	PayeeAlias               string         `json:"payeeAlias,omitempty"`
+	PayeePaymentReference    string         `json:"payeePaymentReference,omitempty"`
+	PayerPaymentReference    string         `json:"payerPaymentReference,omitempty"`
+	PayerAlias               string         `json:"payerAlias,omitempty"`
+	PaymentReference         string         `json:"paymentReference,omitempty"`
+	OriginalPaymentReference string         `json:"originalPaymentReference,omitempty"`
+	Status                   string         `json:"status,omitempty"`
 }
 
 // CreatePaymentRequest will create a payment request to Swish and return a payment
